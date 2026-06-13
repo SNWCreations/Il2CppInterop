@@ -37,9 +37,9 @@ jobs:
         shell: pwsh
         run: |
           [xml]$props = Get-Content Directory.Build.props
-          $versionPrefix = $props.Project.PropertyGroup.VersionPrefix
+          $versionPrefix = "$($props.Project.PropertyGroup.VersionPrefix)".Trim()
           $versionSuffixNode = $props.SelectSingleNode('//VersionSuffix')
-          $versionSuffix = if ($versionSuffixNode -ne $null) { $versionSuffixNode.InnerText } else { '' }
+          $versionSuffix = if ($versionSuffixNode -ne $null) { "$($versionSuffixNode.InnerText)".Trim() } else { '' }
           $version = if ([string]::IsNullOrWhiteSpace($versionSuffix)) { $versionPrefix } else { "$versionPrefix-$versionSuffix" }
           $expectedTag = "v$version"
           if ($env:GITHUB_REF_NAME -ne $expectedTag) {

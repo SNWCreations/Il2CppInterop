@@ -1,0 +1,129 @@
+name: Publish Packages
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish_to_nuget:
+        description: 'Also publish to NuGet.org after int.nugettest.org succeeds'
+        required: true
+        default: false
+        type: boolean
+
+jobs:
+  build:
+    runs-on: windows-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: |
+          dotnet restore Il2CppInterop.Common/Il2CppInterop.Common.csproj
+          dotnet restore Il2CppInterop.Runtime/Il2CppInterop.Runtime.csproj
+
+      - name: Validate tag matches package version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          [xml]$props = Get-Content Directory.Build.props
+          $versionPrefix = $props.Project.PropertyGroup.VersionPrefix
+          $versionSuffixNode = $props.SelectSingleNode('//VersionSuffix')
+          $versionSuffix = if ($versionSuffixNode -ne $null) { $versionSuffixNode.InnerText } else { '' }
+          $version = if ([string]::IsNullOrWhiteSpace($versionSuffix)) { $versionPrefix } else { "$versionPrefix-$versionSuffix" }
+          $expectedTag = "v$version"
+          if ($env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "Tag '$env:GITHUB_REF_NAME' does not match package version '$expectedTag'."
+          }
+
+      - name: Build
+        run: |
+          dotnet build Il2CppInterop.Common/Il2CppInterop.Common.csproj --configuration Release --no-restore /p:ContinuousIntegrationBuild=true /p:GeneratePackageOnBuild=false
+          dotnet build Il2CppInterop.Runtime/Il2CppInterop.Runtime.csproj --configuration Release --no-restore /p:ContinuousIntegrationBuild=true /p:GeneratePackageOnBuild=false
+
+      - name: Pack
+        run: |
+          dotnet pack Il2CppInterop.Common/Il2CppInterop.Common.csproj --configuration Release --no-build --output artifacts/package /p:ContinuousIntegrationBuild=true
+          dotnet pack Il2CppInterop.Runtime/Il2CppInterop.Runtime.csproj --configuration Release --no-build --output artifacts/package /p:ContinuousIntegrationBuild=true
+
+      - name: Upload packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: snwcreations-il2cppinterop-packages
+          path: artifacts/package/*.nupkg
+          if-no-files-found: error
+
+  publish-test:
+    needs: build
+    runs-on: windows-latest
+    environment: nuget-test
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          name: snwcreations-il2cppinterop-packages
+          path: artifacts/package
+
+      - name: NuGet test login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER || vars.NUGET_USER }}
+          token-service-url: https://int.nugettest.org/api/v2/token
+          audience: https://int.nugettest.org
+
+      - name: Publish to NuGet test environment
+        shell: pwsh
+        run: |
+          $packages = Get-ChildItem artifacts/package/*.nupkg | Sort-Object {
+            if ($_.Name -like 'SNWCreations.Il2CppInterop.Common.*') { 0 } else { 1 }
+          }
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName --source "https://apiint.nugettest.org/v3/index.json" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --skip-duplicate
+          }
+
+  publish-nuget:
+    if: ${{ github.event_name == 'push' || inputs.publish_to_nuget }}
+    needs: publish-test
+    runs-on: windows-latest
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
+        with:
+          name: snwcreations-il2cppinterop-packages
+          path: artifacts/package
+
+      - name: NuGet.org login
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER || vars.NUGET_USER }}
+
+      - name: Publish to NuGet.org
+        shell: pwsh
+        run: |
+          $packages = Get-ChildItem artifacts/package/*.nupkg | Sort-Object {
+            if ($_.Name -like 'SNWCreations.Il2CppInterop.Common.*') { 0 } else { 1 }
+          }
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName --source "https://api.nuget.org/v3/index.json" --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" --skip-duplicate
+          }

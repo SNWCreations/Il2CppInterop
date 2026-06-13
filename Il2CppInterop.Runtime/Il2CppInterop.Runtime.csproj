@@ -1,9 +1,9 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <PackageId>Il2CppInterop.Runtime</PackageId>
-    <Authors>knah, BepInEx et al.</Authors>
-    <Description>Runtime tools for bridging .NET and Il2Cpp together</Description>
+    <PackageId>SNWCreations.Il2CppInterop.Runtime</PackageId>
+    <Authors>knah, BepInEx et al., SNWCreations</Authors>
+    <Description>SNWCreations fork of runtime tools for bridging .NET and Il2Cpp together, including HybridCLR compatibility changes.</Description>
     <TargetFramework>net6.0</TargetFramework>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <RootNamespace>Il2CppInterop.Runtime</RootNamespace>
@@ -12,6 +12,7 @@
     <ImplicitUsings>false</ImplicitUsings>
     <LangVersion>Latest</LangVersion>
     <Nullable>enable</Nullable>
+    <Il2CppmscorlibPath Condition="'$(Il2CppmscorlibPath)' == ''">$(MSBuildProjectDirectory)/Libs/Il2Cppmscorlib.dll</Il2CppmscorlibPath>
   </PropertyGroup>
 
   <ItemGroup>
@@ -23,9 +24,14 @@
   <ItemGroup>
     <Reference Include="Il2Cppmscorlib">
       <Private>false</Private>
-      <HintPath>Libs\Il2Cppmscorlib.dll</HintPath>
+      <HintPath>$(Il2CppmscorlibPath)</HintPath>
     </Reference>
   </ItemGroup>
+
+  <Target Name="ValidateIl2CppmscorlibPath" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(Il2CppmscorlibPath)' == '' or !Exists('$(Il2CppmscorlibPath)')"
+           Text="Il2Cppmscorlib.dll was not found. Set Il2CppmscorlibPath to a valid Il2Cppmscorlib.dll path." />
+  </Target>
 
   <ItemGroup>
     <Folder Include="Libs" />

@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <!-- Optional. Override the Il2Cppmscorlib.dll used to compile Il2CppInterop.Runtime. -->
+    <!-- <Il2CppmscorlibPath>PATH_TO_VENDOR_DLL\Il2Cppmscorlib.dll</Il2CppmscorlibPath> -->
+  </PropertyGroup>
+</Project>

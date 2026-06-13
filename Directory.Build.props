@@ -1,7 +1,8 @@
 <Project>
   <PropertyGroup>
     <VersionPrefix>1.5.2</VersionPrefix>
-    <Authors>BepInEx</Authors>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''">snw.1</VersionSuffix>
+    <Authors>BepInEx, SNWCreations</Authors>
     <PackageOutputPath>../bin/NuGet</PackageOutputPath>
     <OutputPath Condition="'$(Configuration)' == 'Release'">../bin/$(MSBuildProjectName)</OutputPath>
     <LangVersion>latest</LangVersion>
@@ -12,6 +13,10 @@
     <PackageIcon>logo_icon.png</PackageIcon>
     <PackageLicenseExpression>LGPL-3.0-only</PackageLicenseExpression>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageProjectUrl>https://github.com/SNWCreations/Il2CppInterop</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/SNWCreations/Il2CppInterop.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>il2cpp;unity;modding;interop;hybridclr</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <DebugType>embedded</DebugType>

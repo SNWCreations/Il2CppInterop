@@ -1,6 +1,14 @@
-name: .NET
+name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - master
 
 jobs:
   build:
@@ -18,41 +26,45 @@ jobs:
         with:
           global-json-file: global.json
 
-      - name: Extract Release Version
-        id: get_version
-        shell: bash
+      - name: Restore
         run: |
-          if [ "${GITHUB_REF#refs/tags/v}" != "$GITHUB_REF" ]; then
-            echo "version=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
-          else
-            echo "build_tag=ci.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
-          fi
+          dotnet restore Il2CppInterop.Common/Il2CppInterop.Common.csproj
+          dotnet restore Il2CppInterop.Runtime/Il2CppInterop.Runtime.csproj
 
       - name: Build
-        run: ./build.sh --target=Pack --build_version ${{ steps.get_version.outputs.version }} --build_tag ${{ steps.get_version.outputs.build_tag }}
+        run: |
+          dotnet build Il2CppInterop.Common/Il2CppInterop.Common.csproj --configuration Release --no-restore /p:ContinuousIntegrationBuild=true /p:GeneratePackageOnBuild=false
+          dotnet build Il2CppInterop.Runtime/Il2CppInterop.Runtime.csproj --configuration Release --no-restore /p:ContinuousIntegrationBuild=true /p:GeneratePackageOnBuild=false
 
-      - name: Upload artifact
+      - name: Pack
+        run: |
+          dotnet pack Il2CppInterop.Common/Il2CppInterop.Common.csproj --configuration Release --no-build --output artifacts/package /p:ContinuousIntegrationBuild=true
+          dotnet pack Il2CppInterop.Runtime/Il2CppInterop.Runtime.csproj --configuration Release --no-build --output artifacts/package /p:ContinuousIntegrationBuild=true
+
+      - name: Upload packages
         uses: actions/upload-artifact@v4
         with:
-          path: ./bin/zip/*.zip
-          name: Il2CppInterop
+          name: snwcreations-il2cppinterop-packages
+          path: artifacts/package/*.nupkg
+          if-no-files-found: error
 
-      - name: Push to NuGet
-        if: github.ref == 'refs/heads/master' || startsWith(github.ref, 'refs/tags/v')
-        run: |
-          if [ "${GITHUB_REF#refs/tags/v}" != "$GITHUB_REF" ]; then
-            push_source="https://api.nuget.org/v3/index.json"
-            push_api_key="${{ secrets.NUGET_ORG_KEY }}"
-          else
-            push_source="${{ secrets.BEPIN_DEV_NUGET_SOURCE }}"
-            push_api_key="${{ secrets.BEPIN_DEV_NUGET_KEY }}"
-          fi
-          dotnet nuget push --skip-duplicate -s "$push_source" -k "$push_api_key" ./bin/NuGet/*.nupkg
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: windows-latest
+    permissions:
+      contents: write
 
-      - name: Publish a release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
+    steps:
+      - name: Download packages
+        uses: actions/download-artifact@v4
         with:
-          files: ./bin/zip/*.zip
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: snwcreations-il2cppinterop-packages
+          path: artifacts/package
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          prerelease: ${{ contains(github.ref_name, '-') }}
+          generate_release_notes: true
+          files: artifacts/package/*.nupkg

@@ -2,6 +2,8 @@
     <img src="logo/logo_big.svg" width="300">
 </p>
 
+> **SNWCreations package fork:** `SNWCreations.Il2CppInterop.Common` and `SNWCreations.Il2CppInterop.Runtime` are package-ID forks of BepInEx Il2CppInterop used by IL2CppSharp.Hooking while HybridCLR compatibility changes are not available in the upstream runtime package. Assembly names and namespaces remain `Il2CppInterop.*` for compatibility. This fork preserves upstream LGPL-3.0-only licensing.
+
 [![GitHub Workflow Status](https://img.shields.io/github/actions/workflow/status/BepInEx/Il2CppInterop/dotnet.yml)](https://github.com/BepInEx/Il2CppInterop/actions/workflows/dotnet.yml)
 [![GitHub release (latest by date)](https://img.shields.io/github/v/release/BepInEx/Il2CppInterop)](https://github.com/BepInEx/Il2CppInterop/releases)
 

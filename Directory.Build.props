@@ -1,7 +1,7 @@
 <Project>
   <PropertyGroup>
     <VersionPrefix>1.5.2</VersionPrefix>
-    <VersionSuffix Condition="'$(VersionSuffix)' == ''">snw.2</VersionSuffix>
+    <VersionSuffix Condition="'$(VersionSuffix)' == ''">snw.3</VersionSuffix>
     <Authors>BepInEx, SNWCreations</Authors>
     <PackageOutputPath>../bin/NuGet</PackageOutputPath>
     <OutputPath Condition="'$(Configuration)' == 'Release'">../bin/$(MSBuildProjectName)</OutputPath>
